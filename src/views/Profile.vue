@@ -65,6 +65,12 @@
               选择界面显示语言
             </template>
           </a-form-item>
+          <a-form-item label="聊天记录保存条数">
+            <n-select v-model:value="preferences.chatMsgSize" :options="languageOptions" />
+            <template #extra>
+              建议小于1000条。
+            </template>
+          </a-form-item>
           <a-form-item label="通知设置">
             <n-switch v-model:value="preferences.notifications" />
             <template #extra>
@@ -137,6 +143,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMessage, useDialog } from 'naive-ui'
 import { useAuthStore } from '@/stores/auth'
+import { useCountdown, useManualRefHistory } from '@vueuse/core'
 
 const router = useRouter()
 const message = useMessage()
@@ -160,10 +167,13 @@ const passwordForm = reactive({
   confirmPassword: ''
 })
 
+useCountdown
+
 // 系统偏好
 const preferences = reactive({
   theme: 'auto',
   language: 'zh-CN',
+  chatMsgSize: 200,
   notifications: true,
   autoExecute: false
 })

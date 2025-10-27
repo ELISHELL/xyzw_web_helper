@@ -11,17 +11,10 @@
               <p>今天是 {{ currentDate }}，继续您的游戏管理之旅吧</p>
             </div>
             <div class="welcome-actions">
-              <n-button
-                type="primary"
-                size="large"
-                @click="router.push('/admin/game-features')"
-              >
+              <n-button type="primary" size="large" @click="router.push('/admin/game-features')">
                 进入游戏功能
               </n-button>
-              <n-button
-                size="large"
-                @click="handleManageTokens"
-              >
+              <n-button size="large" @click="handleManageTokens">
                 管理Token
               </n-button>
             </div>
@@ -31,16 +24,9 @@
         <!-- 统计卡片 -->
         <section class="stats-section">
           <div class="stats-grid">
-            <div
-              v-for="stat in statistics"
-              :key="stat.id"
-              class="stat-card"
-            >
-              <div
-                class="stat-icon"
-                :style="{ color: stat.color }"
-              >
-                <component :is="stat.icon" />
+            <div v-for="stat in statistics" :key="stat.id" class="stat-card">
+              <div class="stat-icon" :style="{ color: stat.color }">
+                <i :class="stat.icon" size-12 center></i>
               </div>
               <div class="stat-content">
                 <div class="stat-number">
@@ -49,10 +35,7 @@
                 <div class="stat-label">
                   {{ stat.label }}
                 </div>
-                <div
-                  class="stat-change"
-                  :class="stat.changeType"
-                >
+                <div class="stat-change" :class="stat.changeType">
                   {{ stat.change }}
                 </div>
               </div>
@@ -66,14 +49,9 @@
             快速操作
           </h2>
           <div class="actions-grid">
-            <div
-              v-for="action in quickActions"
-              :key="action.id"
-              class="action-card"
-              @click="handleQuickAction(action)"
-            >
+            <div v-for="action in quickActions" :key="action.id" class="action-card" @click="handleQuickAction(action)">
               <div class="action-icon">
-                <component :is="action.icon" />
+                <i :class="action.icon" size-12></i>
               </div>
               <div class="action-content">
                 <h3>{{ action.title }}</h3>
@@ -89,29 +67,15 @@
             <h2 class="section-title">
               最近活动
             </h2>
-            <n-button
-              text
-              type="primary"
-              @click="refreshActivity"
-            >
+            <n-button text type="primary" @click="refreshActivity">
               刷新
             </n-button>
           </div>
 
-          <div
-            v-if="recentActivities.length"
-            class="activity-list"
-          >
-            <div
-              v-for="activity in recentActivities"
-              :key="activity.id"
-              class="activity-item"
-            >
-              <div
-                class="activity-icon"
-                :class="activity.type"
-              >
-                <component :is="getActivityIcon(activity.type)" />
+          <div v-if="recentActivities.length" class="activity-list">
+            <div v-for="activity in recentActivities" :key="activity.id" class="activity-item">
+              <div class="activity-icon" :class="activity.type">
+                <i :class="getActivityIcon(activity.type)" />
               </div>
               <div class="activity-content">
                 <div class="activity-text">
@@ -124,10 +88,7 @@
             </div>
           </div>
 
-          <div
-            v-else
-            class="empty-activity"
-          >
+          <div v-else class="empty-activity">
             <n-empty description="暂无活动记录" />
           </div>
         </section>
@@ -173,7 +134,7 @@ const currentDate = computed(() => {
 const statistics = computed(() => [
   {
     id: 1,
-    icon: PersonCircle,
+    icon: 'i-mdi:account-circle',
     label: '游戏Token',
     value: tokenStore.gameTokens.length,
     change: '+2 本月',
@@ -182,7 +143,7 @@ const statistics = computed(() => [
   },
   {
     id: 2,
-    icon: CheckmarkCircle,
+    icon: 'i-mdi:check-circle',
     label: '已完成任务',
     value: '156',
     change: '+12 今日',
@@ -191,7 +152,7 @@ const statistics = computed(() => [
   },
   {
     id: 3,
-    icon: Time,
+    icon: 'i-mdi:clock',
     label: '节省时间',
     value: '24.5h',
     change: '+3.2h 本周',
@@ -200,7 +161,7 @@ const statistics = computed(() => [
   },
   {
     id: 4,
-    icon: TrendingUp,
+    icon: 'i-mdi:trending-up',
     label: '效率提升',
     value: '85%',
     change: '+15% 本月',
@@ -212,21 +173,21 @@ const statistics = computed(() => [
 const quickActions = ref([
   {
     id: 1,
-    icon: Cube,
+    icon:'i-mdi:gamepad-square',
     title: '游戏功能',
     description: '访问所有游戏功能模块',
     action: 'game-features'
   },
   {
     id: 2,
-    icon: Add,
+    icon: 'i-mdi:plus-box',
     title: '添加Token',
     description: '快速添加新的游戏Token',
     action: 'add-token'
   },
   {
     id: 3,
-    icon: CheckmarkCircle,
+    icon: 'i-mdi:check-circle',
     title: '执行任务',
     description: '一键执行所有待完成任务',
     action: 'execute-tasks'
@@ -234,13 +195,14 @@ const quickActions = ref([
   {
     id: 4,
     icon: Cloud,
+    icon: 'i-mdi:cloud',
     title: 'WebSocket测试',
     description: '测试WebSocket连接和游戏命令',
     action: 'websocket-test'
   },
   {
     id: 5,
-    icon: Settings,
+    icon: 'i-mdi:cog',
     title: '系统设置',
     description: '配置个人偏好和系统选项',
     action: 'open-settings'
@@ -314,12 +276,12 @@ const refreshActivity = () => {
 const getActivityIcon = (type) => {
   switch (type) {
     case 'success':
-      return CheckmarkCircle
+      return 'i-mdi:check-circle'
     case 'warning':
-      return Time
+      return 'i-mdi:timer'
     case 'info':
     default:
-      return Cube
+      return 'i-mdi:gamepad-square'
   }
 }
 

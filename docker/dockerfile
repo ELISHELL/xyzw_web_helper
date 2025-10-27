@@ -1,4 +1,4 @@
-FROM nginx:xyzw
+FROM nginx:latest
 
 VOLUME /app/web
 COPY ./dist /app/web

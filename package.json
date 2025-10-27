@@ -19,12 +19,15 @@
     "@vicons/material": "^0.12.0",
     "@vueuse/core": "^13.9.0",
     "axios": "^1.12.2",
+    "buffer": "^6.0.3",
+    "crypto-js": "^4.2.0",
     "event-emitter3": "^1.0.4",
     "lz4js": "^0.2.0",
     "moment": "^2.30.1",
     "naive-ui": "^2.43.1",
     "p-queue": "^9.0.0",
     "pinia": "^2.3.1",
+    "vitest": "^4.0.1",
     "vue": "^3.5.22",
     "vue-i18n": "^11.1.12",
     "vue-router": "^4.6.3"
@@ -32,6 +35,7 @@
   "devDependencies": {
     "@iconify-json/mdi": "^1.2.3",
     "@intlify/unplugin-vue-i18n": "^11.0.1",
+    "@types/crypto-js": "^4.2.2",
     "@types/node": "^20.19.21",
     "@vitejs/plugin-basic-ssl": "^2.1.0",
     "@vitejs/plugin-vue": "^5.2.4",

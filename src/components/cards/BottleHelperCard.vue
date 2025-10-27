@@ -16,7 +16,7 @@
       </div>
     </template>
     <template #action>
-      <a-button type="primary" secondary size="small" block @click="handleBottleHelper">
+      <a-button type="primary" @click="handleBottleHelper">
         {{ state.isRunning ? '重启服务' : '启动服务' }}
       </a-button>
     </template>
