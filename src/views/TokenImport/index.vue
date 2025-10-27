@@ -216,27 +216,30 @@
 
 <script setup>
 
+import BinTokenForm from './bin.vue'
 import ManualTokenForm from './manual.vue'
 import UrlTokenForm from './url.vue'
-import BinTokenForm from './bin.vue'
 
-import { useTokenStore, selectedTokenId } from '@/stores/tokenStore'
+import { selectedTokenId, useTokenStore } from '@/stores/tokenStore'
+import { Message } from '@arco-design/web-vue'
 import {
   Add,
   Copy,
   Create,
   EllipsisHorizontal,
   Home,
-  Key,
   Menu,
   Refresh,
   Star,
   SyncCircle,
   TrashBin
 } from '@vicons/ionicons5'
+import { Buffer } from 'buffer'
 import { NIcon, useDialog, useMessage } from 'naive-ui'
 import { h, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { bin2token, url2token } from './TokenUtil'
+import { isObject } from '@vueuse/core'
 
 // 接收路由参数
 const props = defineProps({
@@ -294,96 +297,43 @@ const bulkOptions = [
 // 刷新Token
 const refreshToken = async (token) => {
   refreshingTokens.value.add(token.id)
-
   try {
-    if (token.sourceUrl) {
-      // 有源URL的token - 从URL重新获取
-      let response
-
-      const isLocalUrl = token.sourceUrl.startsWith(window.location.origin) ||
-        token.sourceUrl.startsWith('/') ||
-        token.sourceUrl.startsWith('http://localhost') ||
-        token.sourceUrl.startsWith('http://127.0.0.1')
-
-      if (isLocalUrl) {
-        response = await fetch(token.sourceUrl)
-      } else {
-        try {
-          response = await fetch(token.sourceUrl, {
-            method: 'GET',
-            headers: {
-              'Accept': 'application/json',
-            },
-            mode: 'cors'
-          })
-        } catch (corsError) {
-          throw new Error(`跨域请求被阻止。请确保目标服务器支持CORS。错误详情: ${corsError.message}`)
+    switch (token.importMethod) {
+      case 'bin':
+        if (!token.binToken) {
+          Message.error('缺少bin文件！请重新导入');
         }
-      }
-
-      if (!response.ok) {
-        throw new Error(`请求失败: ${response.status} ${response.statusText}`)
-      }
-
-      const data = await response.json()
-
-      if (!data.token) {
-        throw new Error('返回数据中未找到token字段')
-      }
-
-      // 更新token信息
-      tokenStore.updateToken(token.id, {
-        token: data.token,
-        server: data.server || token.server,
-        lastRefreshed: Date.now()
-      })
-
-      message.success('Token刷新成功')
-    } else {
-      // 没有源URL的token - 提示用户手动处理
-      dialog.info({
-        title: '重新获取Token',
-        content: `Token "${token.name}" 是手动导入的，没有配置自动刷新地址。
-
-请选择以下操作：
-1. 重新手动导入新的Token
-2. 尝试重新连接现有Token`,
-        positiveText: '重新导入',
-        negativeText: '重新连接',
-        onPositiveClick: () => {
-          showImportForm.value = true
-          importMethod.value = 'manual'
-          importForm.name = token.name
-          importForm.server = token.server
-          importForm.wsUrl = token.wsUrl
-        },
-        onNegativeClick: () => {
-          // 断开现有连接
-          if (tokenStore.getWebSocketStatus(token.id) === 'connected') {
-            tokenStore.closeWebSocketConnection(token.id)
-          }
-
-          // 尝试重新连接
-          setTimeout(() => {
-            tokenStore.createWebSocketConnection(token.id, token.token, token.wsUrl)
-            message.info('正在尝试重新连接...')
-          }, 500)
+        let bin = Buffer.from(token.binToken, 'hex');
+        token.token = await bin2token(bin);
+        break;
+      case 'url':
+        if (!token.sourceUrl) {
+          Message.error('缺失url,请检查更新');
         }
-      })
-      return
-    }
-
+        token.token = await url2token(token.sourceUrl);
+        break;
+      case 'manual':
+        importMethod.value = 'manual'
+        importForm.name = token.name
+        importForm.server = token.server
+        importForm.wsUrl = token.wsUrl
+        importForm.importMethod = 'manual'
+        showImportForm.value = true
+        break;
+      default: () => {
+        Message.error(`未知的导入方式 ${token.importMethod}, 不支持刷新!`);
+      }
+    };
     // 如果当前token有连接，需要重新连接
     if (tokenStore.getWebSocketStatus(token.id) === 'connected') {
       tokenStore.closeWebSocketConnection(token.id)
-      setTimeout(() => {
-        tokenStore.createWebSocketConnection(token.id, token.token, token.wsUrl)
-      }, 500)
-    }
-
+      await new Promise(resH => setTimeout(resH, 500));
+      tokenStore.createWebSocketConnection(token.id, token.token, token.wsUrl)
+    };
+    Message.success(`刷新Token成功！`);
   } catch (error) {
     console.error('刷新Token失败:', error)
-    message.error(error.message || 'Token刷新失败')
+    Message.error(error.message || 'Token刷新失败')
   } finally {
     refreshingTokens.value.delete(token.id)
   }
@@ -576,7 +526,6 @@ const copyToken = async (token) => {
   }
 }
 
-
 const deleteToken = (token) => {
   dialog.warning({
     title: '删除Token',
@@ -680,6 +629,9 @@ const clearAllTokens = () => {
 }
 
 const maskToken = (token) => {
+  if (typeof token !== 'string') {
+    return maskToken(JSON.stringify(token));
+  }
   if (!token) return ''
   const len = token.length
   if (len <= 8) return token

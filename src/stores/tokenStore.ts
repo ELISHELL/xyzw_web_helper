@@ -7,16 +7,26 @@ import { XyzwWebSocketClient } from '@/utils/xyzwWebSocket'
 
 import { emitPlus } from './events/index.js'
 
+export type TokenLevel = 1 | 2 | 3 | 4 | 5;
 
-declare interface TokenData {
+export type ImportMethod = 'manual' | 'url' | 'bin';
+
+export interface TokenData {
   id: string;
   name: string;
-  token: string; // 原始Base64 token
-  wsUrl: string | null; // 可选的自定义WebSocket URL
-  server: string;
+  level: TokenLevel;
+  token?: string; // 原始Base64 token
+  binToken?: string; // 二进制格式token
+  base64Token?: string; // Base64格式token
+  profession?: string; // 可选的自定义WebSocket URL
+  server?: string; // 服务器信息
+  wsUrl?: string; // 可选的自定义WebSocket URL
+
+  sourceUrl?: string;
+  importMethod?: ImportMethod;
 }
 
-declare interface WebSocketConnection {
+export interface WebSocketConnection {
   status: 'connecting' | 'connected' | 'disconnected' | 'error';
   client: XyzwWebSocketClient | null;
   lastError: { timestamp: string; error: string } | null;
@@ -36,7 +46,7 @@ declare interface ConnectLock {
 }
 declare type LockCtx = Record<string, Partial<ConnectLock>>;
 
-export const gameTokens = useLocalStorage<TokenData[]>('gameTokens', []);
+export const gameTokens = useLocalStorage<Partial<TokenData>[]>('gameTokens', []);
 export const hasTokens = computed(() => gameTokens.value.length > 0)
 export const selectedTokenId = useLocalStorage('selectedTokenId', "");
 export const selectedToken = computed(() => {
@@ -47,14 +57,17 @@ export const selectedRoleInfo = useLocalStorage<any>('selectedRoleInfo', null);
 // 跨标签页连接协调
 const activeConnections = useLocalStorage("activeConnections", {});
 
+// WebSocket连接状态
+const wsConnections = ref<WebCtx>({})
+
+// 连接操作锁，防止竞态条件
+const connectionLocks = ref<LockCtx>({})
+
 /**
  * 重构后的Token管理存储
  * 以名称-token列表形式管理多个游戏角色
  */
 export const useTokenStore = defineStore('tokens', () => {
-
-  const wsConnections = ref<WebCtx>({}) // WebSocket连接状态
-  const connectionLocks = ref<LockCtx>({}) // 连接操作锁，防止竞态条件
 
   // 游戏数据存储
   const gameData = ref({
@@ -77,22 +90,16 @@ export const useTokenStore = defineStore('tokens', () => {
   })
 
   // Token管理
-  const addToken = (tokenData: TokenData) => {
+  const addToken = (tokenData: Partial<TokenData>) => {
     const newToken = {
       id: 'token_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
-      name: tokenData.name,
-      token: tokenData.token, // 保存原始Base64 token
-      wsUrl: tokenData.wsUrl || null, // 可选的自定义WebSocket URL
-      server: tokenData.server || '',
-      level: tokenData.level || 1,
-      profession: tokenData.profession || '',
+      level: 1,
+      importMethod: "manual",
       createdAt: new Date().toISOString(),
       lastUsed: new Date().toISOString(),
       isActive: true,
-      // URL获取相关信息
-      sourceUrl: tokenData.sourceUrl || null, // Token来源URL（用于刷新）
-      importMethod: tokenData.importMethod || 'manual' // 导入方式：manual 或 url
-    }
+      ...tokenData,
+    } as TokenData;
 
     gameTokens.value.push(newToken)
     return newToken
@@ -866,11 +873,6 @@ export const useTokenStore = defineStore('tokens', () => {
     startMonitoring: () => {
       setInterval(() => {
         const now = Date.now()
-
-        console.log('ws连接监控运行中...', wsConnections.value)
-        console.log('co连接监控运行中...', connectionLocks.value)
-        console.log('ac连接监控运行中...', activeConnections.value)
-
         // 检查连接超时（超过30秒未活动）
         Object.entries(wsConnections.value).forEach(([tokenId, connection]) => {
           const lastActivity = connection.lastMessage?.timestamp || connection.connectedAt

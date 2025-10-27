@@ -6,7 +6,7 @@ import { EventEmitter } from 'event-emitter3';
 import { StudyPlugin } from './study.js';
 import { useLocalStorage } from '@vueuse/core';
 
-const chatMsgList = useLocalStorage<any>('xyzw_chat_msg_list', []);
+const chatMsgList = useLocalStorage<Array<any>>('xyzw_chat_msg_list', []);
 
 export const $emit = new EventEmitter();
 export const events: Set<string> = new Set<string>();
@@ -65,6 +65,9 @@ onSome(['system_newchatmessagenotify', 'system_newchatmessagenotifyresp'], (data
     return;
   }
   chatMsgList.value.push(body.chatMessage);
+  while (chatMsgList.value.length > 100) {
+    chatMsgList.value.shift();
+  }
 });
 
 onSome(['role_getroleinforesp', 'role_getroleinfo'], (data: Session) => {

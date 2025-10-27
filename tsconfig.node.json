@@ -20,6 +20,7 @@
     "forceConsistentCasingInFileNames": true,
   },
   "include": [
+    "test/**/*.ts",
     "vite.config.ts",
     "eslint.config.ts",
     "uno.config.ts",

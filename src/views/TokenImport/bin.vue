@@ -59,13 +59,16 @@
 
 <script lang="ts" setup>
 import { ref, reactive } from 'vue';
-import { useTokenStore } from '@/stores/tokenStore';
+import { useTokenStore, gameTokens, type TokenData } from '@/stores/tokenStore';
 import { CloudUpload } from '@vicons/ionicons5';
 
 import { NForm, NFormItem, NInput, NButton, NIcon, NCollapse, NCollapseItem, useMessage } from 'naive-ui';
 import axios from 'axios';
 import { g_utils } from '../../utils/bonProtocol';
 import PQueue from 'p-queue';
+import { enc } from 'crypto-js';
+import { bin2token } from './TokenUtil';
+import { Buffer } from 'buffer';
 // import { useI18n } from 'vue-i18n';
 
 const $emit = defineEmits(['cancel', 'ok']);
@@ -79,12 +82,15 @@ const message = useMessage();
 const importFormRef = ref();
 const isImporting = ref(false);
 const importForm = reactive({
+  type: '',
   name: '',
+  binHex: '',
   base64Token: '',
   server: '',
   wsUrl: ''
 });
-const roleList = ref<Array<{ name: string; base64Token: string; server: string; wsUrl: string }>>([]);
+
+const roleList = ref<Array<Partial<TokenData>>>([]);
 
 const importRules = {
   name: [
@@ -99,39 +105,6 @@ const importRules = {
 
 const tQueue = new PQueue({ concurrency: 1, interval: 1000, });
 
-const transformToken = async (arrayBuffer: ArrayBuffer) => {
-  // 如果是data URL格式，提取base64部分
-  const res = await axios.post('https://xxz-xyzw.hortorgames.com/login/authuser', arrayBuffer, {
-    params: {
-      _seq: 1,
-    },
-    headers: {
-      'Content-Type': 'application/octet-stream',
-      "referrerPolicy": "no-referrer",
-    },
-    responseType: 'arraybuffer'
-  })
-  console.log('转换Token:', typeof res.data);
-
-  const msg = g_utils.parse(res.data);
-  console.log('解析结果:', msg);
-
-
-  const data = msg.getData();
-  console.log('数据内容:', data);
-
-  const currentTime = Date.now();
-  const sessId = currentTime * 100 + Math.floor(Math.random() * 100);
-  const connId = currentTime + Math.floor(Math.random() * 10);
-
-  return JSON.stringify({
-    ...data,
-    sessId,
-    connId,
-    isRestore: 0
-  });
-};
-
 const initName = (fileName: string) => {
   if (!fileName) return;
   fileName = fileName.trim();
@@ -145,25 +118,42 @@ const initName = (fileName: string) => {
       roleId: binRes[3],
       roleName: binRes[4]
     };
+  } else {
+    importForm.name = fileName
+      .replace(/^bin-/, '')
+      .replace(/^bin_/, '')
+      .replace(/_?bin_?/, '')
+      .replace(/-?bin-?/, '')
+      .replace(/\.bin$|\.dmp$/i, '');
+    return {
+      server: "",
+      roleIndex: "",
+      roleId: "",
+      roleName: fileName
+    };
   }
-  return {}
 }
 
-const uploadBin = (binFile: File) => {
-  tQueue.add(async () => {
+const uploadBin = async (binFile: File) => {
+  await tQueue.add(async () => {
     console.log('上传文件数据:', binFile);
     const roleMeta = initName(binFile.name) as any;
     const reader = new FileReader();
     reader.onload = async (e) => {
       const userToken = e.target?.result as ArrayBuffer;
-      const roleToken = await transformToken(userToken);
+      const roleToken = await bin2token(userToken);
       message.success('Token读取成功，请检查角色名称等信息后提交');
 
+      // 将 userToken 转换为 Base64 字符串
+      const binToken = Buffer.from(userToken).toString("hex");
+
       roleList.value.push({
-        name: roleMeta.roleName || '',
+        name: roleMeta.roleName as string,
         token: roleToken,
+        binToken: binToken,
         server: roleMeta.server + '-' + roleMeta.roleIndex || '',
-        wsUrl: importForm.wsUrl || ''
+        wsUrl: importForm.wsUrl || '',
+        _skip_save_bin: false
       });
     };
     reader.onerror = () => {
@@ -175,12 +165,22 @@ const uploadBin = (binFile: File) => {
 };
 
 const handleImport = async () => {
-  roleList.value.forEach(role => {
-    tokenStore.addToken({
-      ...role
-    });
+  roleList.value.map(role => {
+    if (importForm._skip_save_bin) {
+      tokenStore.addToken({
+        ...role,
+        importMethod: 'bin',
+        binToken: undefined,
+      });
+      return;
+    } else {
+      tokenStore.addToken({
+        ...role,
+        importMethod: 'bin'
+      });
+    }
   });
-  console.log('当前Token列表:', tokenStore.tokens);
+  console.log('当前Token列表:', gameTokens.value);
   message.success('Token添加成功');
   roleList.value = [];
   $emit('ok');

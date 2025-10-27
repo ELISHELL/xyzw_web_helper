@@ -7,7 +7,7 @@
     "explorer.fileNesting.enabled": true,
     "explorer.fileNesting.patterns": {
         "index.html": "*.md",
-        "vite.config.*": ".env*, vite-env.d.ts, vitest.config.*, uno.config.*, cypress.config.*, .eslint*, eslint.config*, .prettier*, prettier.config.*, playwright.config.*, electron-builder.json5",
+        "vite.config.*": ".env*,*.config.json, vite-env.d.ts, vitest.config.*, uno.config.*, cypress.config.*, .eslint*, eslint.config*, .prettier*, prettier.config.*, playwright.config.*, electron-builder.json5",
         "tsconfig.json": "jsconfig*, tsconfig.*.json, env.d.ts, components.d.ts, *imports.d.ts",
         "package.json": "package-lock.json, pnpm*,.npmrc, .yarnrc*, yarn*, .editorconfig"
     },
